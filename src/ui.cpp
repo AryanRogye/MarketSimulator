@@ -178,6 +178,13 @@ void UI::drawUsers(WindowSize size) {
         nullptr,
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
     );
+
+    if (ImGui::BeginChild("Users", ImVec2(0.0f, 0.0f))) {
+        for (const auto& user: this->marketState->getUsers()) {
+            ImGui::Text("User: %f", user->getBalance());
+        }
+    }
     
+    ImGui::EndChild();
     ImGui::End();
 }
