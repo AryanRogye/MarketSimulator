@@ -80,6 +80,7 @@ add_executable(MarketSim
     src/MarketState.cpp
     src/Stock.cpp
     src/MarketSim.cpp
+    src/User.cpp
 )
 
 target_link_libraries(MarketSim PRIVATE
