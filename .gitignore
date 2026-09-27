@@ -1,0 +1,15 @@
+# Build output
+/build/
+/cmake-build-*/
+/out/
+
+# Local editor and tool state
+/.cache/
+/.vscode/
+/.idea/
+*.swp
+*.swo
+
+# Runtime and OS files
+/imgui.ini
+.DS_Store
