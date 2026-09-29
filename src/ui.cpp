@@ -1,13 +1,20 @@
+
+#define GL_SILENCE_DEPRECATION
+
 #include "ui.h"
 #include "GLFW/glfw3.h"
+#include <Stock.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <implot.h>
 #include <iostream>
+#include <memory>
 #include <unordered_map>
 
+
 static std::string selected_symbol = "";
+static std::string selected_user = "";
 
 UI::UI(std::shared_ptr<MarketState> marketState) : marketState(marketState) {
 
@@ -50,7 +57,7 @@ enum UIWindow {
 };
 std::unordered_map<UIWindow, WindowSize> getWindowSizes(int width, int height) {
 
-    float usersScreenWidth = 200.0f;
+    float usersScreenWidth = 300.0f;
     float stockScreenWidth = static_cast<float>(width) - usersScreenWidth;
 
     float stockScreenHeight = static_cast<float>(height);
@@ -112,30 +119,33 @@ void UI::drawStocks(WindowSize size) {
             ImGuiTableFlags_ScrollY;
         
         if (ImGui::BeginTable("StockListTable", 1, flags, ImVec2(0.0f, ImGui::GetContentRegionAvail().y))) {
-            for (const auto& stock: this->marketState->getStocks()) {
+            for (const auto& stockInfo: this->marketState->getStocks()) {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
 
                 ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanFullWidth;
 
+                Stock& stock = *stockInfo.second;
+
                 /// if is selected set the selected flag
-                if (selected_symbol == stock->getSymbol()) {
+                if (selected_symbol == stock.getSymbol()) {
                     node_flags |= ImGuiTreeNodeFlags_Selected;
                 }
 
-                if (ImGui::TreeNodeEx(stock->getSymbol().c_str(), node_flags)) {
+                if (ImGui::TreeNodeEx(stock.getSymbol().c_str(), node_flags)) {
                     ImGui::Indent();
 
-                    ImGui::Text("Price: %.2f", stock->getPrice());
+                    ImGui::Text("Price: %.2f", stock.getPrice());
+                    ImGui::Text("Shares: %d", stock.getShares());
                     // ImGui::Dummy(ImVec2(0, 500));
                     if (ImPlot::BeginPlot("Price")) {
                         
-                        std::vector<double> prices = stock->getPrices();
-                        std::vector<double> times = stock->getTimes();
+                        std::vector<double> prices = stock.getPrices();
+                        std::vector<double> times = stock.getTimes();
 
                         double currentTime = times[times.size() - 1];
-                        double lowestPrice = stock->getLowestPrice() - 10;
-                        double highestPrice = stock->getHighestPrice() + 10;
+                        double lowestPrice = stock.getLowestPrice() - 10;
+                        double highestPrice = stock.getHighestPrice() + 10;
                         
                         ImPlot::SetupAxesLimits(
                             0.0, 
@@ -159,7 +169,7 @@ void UI::drawStocks(WindowSize size) {
                 }
 
                 if (ImGui::IsItemClicked()) {
-                    selected_symbol = stock->getSymbol();
+                    selected_symbol = stock.getSymbol();
                 }
             }
             ImGui::EndTable();
@@ -180,8 +190,44 @@ void UI::drawUsers(WindowSize size) {
     );
 
     if (ImGui::BeginChild("Users", ImVec2(0.0f, 0.0f))) {
-        for (const auto& user: this->marketState->getUsers()) {
-            ImGui::Text("User: %f", user->getBalance());
+        ImGuiTableFlags flags =
+            ImGuiTableFlags_RowBg |
+            ImGuiTableFlags_ScrollY;
+
+        if (ImGui::BeginTable("UserInfoTable", 1, flags, ImVec2(0.0f, ImGui::GetContentRegionAvail().y))) {
+            for (const auto& user: this->marketState->getUsers()) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                
+                ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_SpanFullWidth;
+
+                if (selected_user == user->get_id()) {
+                    node_flags |= ImGuiTreeNodeFlags_Selected;
+                }
+                
+                if (ImGui::TreeNodeEx(user->get_id().c_str(), node_flags)) {
+                    ImGui::Indent();
+                    
+                    ImGui::Text("Balance: %f", user->getBalance());
+
+                    std::unordered_map<std::string, std::vector<Order>> orders = user->get_orders();
+                    for (const auto& [symbol, orders]: orders) {
+                        ImGui::Indent();
+                        ImGui::Text("%s", symbol.c_str());
+                        ImGui::Indent();
+                        for (const auto& order: orders) {
+                            ImGui::Text("%s: %f x %d", order.type == OrderType::BUY ? "Buy" : "Sell", order.price, order.quantity);
+                        }
+                        ImGui::Unindent();
+                        ImGui::Unindent();
+                    }
+                    
+                    ImGui::Unindent();
+                    ImGui::TreePop();
+                }
+            }
+            
+            ImGui::EndTable();
         }
     }
     
